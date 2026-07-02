@@ -4,6 +4,7 @@ import { google } from "@ai-sdk/google";
 import { text } from "stream/consumers";
 import { getRandomInterviewCover } from "@/lib/utils";
 import { db } from "@/firebase/admin";
+import { groq } from '@ai-sdk/groq';
 
 export async function GET() {
     return Response.json({success:true, data:"Thank You!"},{
@@ -14,7 +15,8 @@ export async function POST(request: Request){
     const { type, role, level, techstack, amount, userid } = await request.json();
     try{
       const { text:questions } = await generateText({
-        model: google('gemini-2.0-flash-001'),
+        // model: google('gemini-2.0-flash-001'),
+        model: groq('llama-3.3-70b-versatile'),
         prompt:`Prepare questions for a job interview.
         The job role is ${role}.
         The job experience level is ${level}.
@@ -42,8 +44,16 @@ export async function POST(request: Request){
       await db.collection("interviews").add(interview);
       return Response.json({success:true},{status:200})
     }
-    catch(err){
-        console.error(err);
-        return Response.json({success:false, err},{status:500})
+    catch(err:any){
+       console.error("Detailed API Error:", err);
+
+    // Pull out the human-readable message if it exists, otherwise use the raw error
+      const errorMessage = err.message || (err.error && err.error.message) || "An unexpected error occurred";
+
+    return Response.json({ 
+        success: false, 
+        message: "Failed to generate interview questions",
+        error: errorMessage 
+    }, { status: 500 });
     }
 }
